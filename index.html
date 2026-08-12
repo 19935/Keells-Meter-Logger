@@ -173,6 +173,7 @@
       <option value="water">Water reading</option>
     </select>
     <button type="button" class="export-btn" id="export-btn">Export to Excel</button>
+    <button type="button" class="export-btn" id="refresh-btn">Refresh</button>
     <button type="button" class="owner-btn" id="owner-btn">Owner mode: off</button>
   </div>
 
@@ -420,6 +421,15 @@ document.getElementById('f-type').addEventListener('change', (e) => {
   label.textContent = e.target.value === 'water' ? 'Reading (m³)' : 'Reading (kWh)';
 });
 
+async function fetchLatestReadings(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, true);
+    return res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){
+    return readings;
+  }
+}
+
 document.getElementById('entry-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.target;
@@ -440,6 +450,7 @@ document.getElementById('entry-form').addEventListener('submit', async (e) => {
     loggedAt: new Date().toISOString()
   };
   entry.status = computeStatus(entry.date, entry.loggedAt);
+  readings = await fetchLatestReadings();
   readings.push(entry);
 
   if (!outletNames.some(n => n.toLowerCase() === outlet.toLowerCase())){
@@ -459,6 +470,7 @@ document.getElementById('table-body').addEventListener('click', async (e) => {
   const btn = e.target.closest('button[data-action="delete"]');
   if (!btn || btn.disabled || !ownerUnlocked) return;
   const id = btn.getAttribute('data-id');
+  readings = await fetchLatestReadings();
   readings = readings.filter(r => r.id !== id);
   await saveReadings();
   render();
@@ -673,6 +685,16 @@ document.getElementById('reminder-btn').addEventListener('click', () => {
     alert(`Note: ${withoutEmail.length} missing outlet(s) have no email on file and were left out of the recipient list: ${withoutEmail.map(o => o.location).join(', ')}`);
   }
 });
+
+document.getElementById('refresh-btn').addEventListener('click', async () => {
+  readings = await fetchLatestReadings();
+  render();
+});
+
+setInterval(async () => {
+  readings = await fetchLatestReadings();
+  render();
+}, 30000);
 
 document.getElementById('rem-date').value = todayStr();
 document.getElementById('f-date').value = todayStr();
