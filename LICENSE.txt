@@ -1,0 +1,12 @@
+INTERNAL USE LICENSE
+
+This tool (Outlet Meter Log) is provided for internal use within
+John Keells Group / Keells outlets only.
+
+It is not licensed for redistribution, resale, or use outside the
+organization without permission from the tool owner.
+
+Provided as-is, without warranty of any kind. The owner is
+responsible for maintaining the passcode used to protect data
+deletion (see README.txt) and for the accuracy of data entered by
+users of the tool.

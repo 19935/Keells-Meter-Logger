@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outlet meter log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14171B;
+    --panel:#1B1F25;
+    --raised:#242A31;
+    --raised2:#2C333B;
+    --copper:#C97A3D;
+    --copper-dim:#8F5A2E;
+    --amber:#E8A33D;
+    --green:#8FBE72;
+    --green-bg:rgba(124,164,94,0.16);
+    --rust:#E08066;
+    --rust-bg:rgba(193,80,63,0.18);
+    --text:#EDE8DA;
+    --text-dim:#9B9689;
+    --text-faint:#6E6B62;
+    --border:rgba(237,232,218,0.10);
+    --border-strong:rgba(237,232,218,0.20);
+    --radius:10px;
+    --font-display:'Space Grotesk',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--text);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1040px;margin:0 auto;padding:32px 24px 64px;}
+
+  /* header */
+  .header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);}
+  .header h1{font-family:var(--font-display);font-weight:600;font-size:26px;margin:0 0 4px;letter-spacing:0.2px;}
+  .header p{margin:0;color:var(--text-dim);font-size:13.5px;}
+  .odometer-wrap{text-align:right;}
+  .odometer{display:flex;gap:4px;justify-content:flex-end;}
+  .digit{
+    width:26px;height:38px;background:var(--raised);
+    border:1px solid var(--border-strong);border-radius:4px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-weight:600;font-size:20px;color:var(--amber);
+    box-shadow:inset 0 -2px 0 rgba(0,0,0,0.35), inset 0 1px 0 rgba(237,232,218,0.05);
+  }
+  .odometer-label{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:6px;font-size:11.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.6px;}
+  .pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2.4s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:0.4;}50%{opacity:1;}}
+
+  /* toolbar */
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+  .toolbar input, .toolbar select{
+    background:var(--panel);border:1px solid var(--border-strong);color:var(--text);
+    border-radius:8px;padding:9px 12px;font-size:13.5px;font-family:var(--font-body);
+    outline:none;
+  }
+  .toolbar input::placeholder{color:var(--text-faint);}
+  .toolbar input:focus, .toolbar select:focus, .entry-form input:focus{border-color:var(--copper);}
+  .search-field{flex:1;min-width:180px;}
+
+  /* entry form */
+  .entry-form{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px;margin-bottom:24px;
+  }
+  .entry-form .row{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1.4fr auto;gap:10px;align-items:end;}
+  .field select{
+    width:100%;background:var(--raised);border:1px solid var(--border-strong);color:var(--text);
+    border-radius:7px;padding:9px 10px;font-size:14px;font-family:var(--font-body);outline:none;
+  }
+  .owner-btn{
+    background:var(--panel);border:1px solid var(--border-strong);color:var(--text-dim);
+    border-radius:8px;padding:9px 14px;font-size:13px;cursor:pointer;font-family:var(--font-body);
+    white-space:nowrap;
+  }
+  .owner-btn.unlocked{border-color:var(--copper);color:var(--copper);}
+  .export-btn{
+    background:var(--panel);border:1px solid var(--border-strong);color:var(--text);
+    border-radius:8px;padding:9px 14px;font-size:13px;cursor:pointer;font-family:var(--font-body);
+    white-space:nowrap;
+  }
+  .export-btn:hover{border-color:var(--copper);color:var(--copper);}
+  .icon-btn:disabled{opacity:0.3;cursor:not-allowed;}
+  .icon-btn:disabled:hover{border-color:var(--border-strong);color:var(--text-dim);}
+  .type-tag{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.4px;}
+  .field label{display:block;font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+  .field input{
+    width:100%;background:var(--raised);border:1px solid var(--border-strong);color:var(--text);
+    border-radius:7px;padding:9px 10px;font-size:14px;font-family:var(--font-body);outline:none;
+  }
+  .field input[name="reading"]{font-family:var(--font-mono);}
+  .add-btn{
+    background:var(--copper);color:#241608;border:none;border-radius:7px;
+    padding:10px 18px;font-size:13.5px;font-weight:500;cursor:pointer;font-family:var(--font-body);
+    white-space:nowrap;
+  }
+  .add-btn:hover{background:#D6874A;}
+  .add-btn:active{transform:scale(0.98);}
+
+  /* table */
+  .table-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  thead th{
+    text-align:left;background:var(--panel);color:var(--text-faint);font-weight:500;
+    font-size:11px;text-transform:uppercase;letter-spacing:0.5px;padding:11px 14px;border-bottom:1px solid var(--border);
+  }
+  tbody td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:rgba(237,232,218,0.02);}
+  .reading-cell{font-family:var(--font-mono);color:var(--amber);}
+  .status-pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:500;}
+  .status-on-time{background:var(--green-bg);color:var(--green);}
+  .status-late{background:var(--rust-bg);color:var(--rust);}
+  .row-actions{display:flex;gap:6px;}
+  .icon-btn{
+    background:transparent;border:1px solid var(--border-strong);color:var(--text-dim);
+    border-radius:6px;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;
+    cursor:pointer;font-size:13px;
+  }
+  .icon-btn:hover{border-color:var(--copper);color:var(--copper);}
+  .empty-row td{text-align:center;color:var(--text-faint);padding:32px 14px;font-style:italic;}
+
+  .footnote{margin-top:14px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-faint);}
+  .footnote button{background:none;border:none;color:var(--text-faint);text-decoration:underline;cursor:pointer;font-size:12px;padding:0;font-family:var(--font-body);}
+  .footnote button:hover{color:var(--rust);}
+
+  @media (max-width:640px){
+    .entry-form .row{grid-template-columns:1fr 1fr;}
+    .entry-form .row > .add-btn{grid-column:1 / -1;}
+    .table-wrap{overflow-x:auto;}
+    table{min-width:640px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div>
+      <h1>Outlet meter log</h1>
+      <p>Daily opening kWh readings across outlets</p>
+    </div>
+    <div class="odometer-wrap">
+      <div class="odometer" id="odometer"></div>
+      <div class="odometer-label"><span class="pulse-dot"></span><span id="odometer-label-text">reported today</span></div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" class="search-field" id="search" placeholder="Search by outlet name">
+    <select id="filter-outlet">
+      <option value="">All outlets</option>
+    </select>
+    <input type="date" id="filter-date">
+    <select id="filter-status">
+      <option value="">All statuses</option>
+      <option value="on-time">On-time</option>
+      <option value="late">Late</option>
+    </select>
+    <select id="filter-type">
+      <option value="">Energy + water</option>
+      <option value="energy">Energy reading</option>
+      <option value="water">Water reading</option>
+    </select>
+    <button type="button" class="export-btn" id="export-btn">Export to Excel</button>
+    <button type="button" class="owner-btn" id="owner-btn">Owner mode: off</button>
+  </div>
+
+  <div class="entry-form" id="reminder-panel" style="margin-bottom:16px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;justify-content:space-between;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+        <div class="field">
+          <label for="rem-date">Reminder date</label>
+          <input type="date" id="rem-date">
+        </div>
+        <div class="field">
+          <label for="rem-type">Requires</label>
+          <select id="rem-type">
+            <option value="both">Energy and water</option>
+            <option value="energy">Energy only</option>
+            <option value="water">Water only</option>
+          </select>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:13px;color:var(--text-dim);margin-bottom:6px;" id="missing-summary">Load an outlet list to see missing outlets.</div>
+        <button type="button" class="export-btn" id="reminder-btn">Generate reminder email</button>
+      </div>
+    </div>
+  </div>
+
+  <form class="entry-form" id="entry-form">
+    <div class="row">
+      <div class="field">
+        <label for="f-outlet">Outlet</label>
+        <input type="text" id="f-outlet" name="outlet" list="outlet-suggestions" placeholder="e.g. Keells Nawala" required>
+        <datalist id="outlet-suggestions"></datalist>
+      </div>
+      <div class="field">
+        <label for="f-date">Date</label>
+        <input type="date" id="f-date" name="date" required>
+      </div>
+      <div class="field">
+        <label for="f-type">Type</label>
+        <select id="f-type" name="type">
+          <option value="energy">Energy (kWh)</option>
+          <option value="water">Water (m&sup3;)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-reading" id="f-reading-label">Reading</label>
+        <input type="number" id="f-reading" name="reading" step="0.1" min="0" placeholder="0.0" required>
+      </div>
+      <div class="field">
+        <label for="f-notes">Notes</label>
+        <input type="text" id="f-notes" name="notes" placeholder="Optional">
+      </div>
+      <button type="submit" class="add-btn">Add reading</button>
+    </div>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Outlet</th>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Reading</th>
+          <th>Logged at</th>
+          <th>Status</th>
+          <th>Notes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+
+  <div class="footnote">
+    <span id="footnote-text">Data is shared and visible to everyone using this log.</span>
+    <span>
+      <input type="file" id="import-input" accept=".xlsx,.csv" style="display:none;">
+      <button type="button" id="import-btn" style="background:none;border:none;color:var(--text-faint);text-decoration:underline;cursor:pointer;font-size:12px;padding:0;margin-right:16px;font-family:var(--font-body);">Import outlet list</button>
+      <button type="button" id="reset-btn">Clear all readings</button>
+    </span>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const STORAGE_KEY = 'meter-readings';
+const OWNER_PASSCODE = 'keells-owner-2026';
+let ownerUnlocked = false;
+const OUTLETS_KEY = 'meter-outlet-names';
+const OUTLET_MASTER_KEY = 'meter-outlet-master';
+let readings = [];
+let outletNames = [];
+let outletMaster = [];
+
+function uid(){
+  return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+}
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+async function loadData(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, true);
+    readings = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){
+    readings = [];
+  }
+  try{
+    const res2 = await window.storage.get(OUTLETS_KEY, true);
+    outletNames = res2 && res2.value ? JSON.parse(res2.value) : [];
+  }catch(e){
+    outletNames = [];
+  }
+  try{
+    const res3 = await window.storage.get(OUTLET_MASTER_KEY, true);
+    outletMaster = res3 && res3.value ? JSON.parse(res3.value) : [];
+  }catch(e){
+    outletMaster = [];
+  }
+  render();
+}
+
+async function saveReadings(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(readings), true);
+  }catch(e){
+    console.error('Failed to save readings', e);
+  }
+}
+
+async function saveOutletNames(){
+  try{
+    await window.storage.set(OUTLETS_KEY, JSON.stringify(outletNames), true);
+  }catch(e){
+    console.error('Failed to save outlet names', e);
+  }
+}
+
+async function saveOutletMaster(){
+  try{
+    await window.storage.set(OUTLET_MASTER_KEY, JSON.stringify(outletMaster), true);
+  }catch(e){
+    console.error('Failed to save outlet master list', e);
+  }
+}
+
+function computeStatus(dateStr, loggedAtIso){
+  const logged = new Date(loggedAtIso);
+  const cutoff = new Date(dateStr + 'T08:00:00');
+  return logged <= cutoff ? 'on-time' : 'late';
+}
+
+function renderOutletSuggestions(){
+  const dl = document.getElementById('outlet-suggestions');
+  dl.innerHTML = outletNames.map(n => `<option value="${escapeHtml(n)}"></option>`).join('');
+
+  const filterSelect = document.getElementById('filter-outlet');
+  const currentValue = filterSelect.value;
+  const sorted = [...outletNames].sort((a,b) => a.localeCompare(b));
+  filterSelect.innerHTML = '<option value="">All outlets</option>' +
+    sorted.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  if (sorted.includes(currentValue)) filterSelect.value = currentValue;
+}
+
+function renderOdometer(){
+  const today = todayStr();
+  const count = new Set(readings.filter(r => r.date === today).map(r => r.outlet.toLowerCase())).size;
+  const digits = String(count).padStart(3,'0').split('');
+  document.getElementById('odometer').innerHTML = digits.map(d => `<div class="digit">${d}</div>`).join('');
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderTable(){
+  const search = document.getElementById('search').value.trim().toLowerCase();
+  const filterOutlet = document.getElementById('filter-outlet').value;
+  const filterDate = document.getElementById('filter-date').value;
+  const filterStatus = document.getElementById('filter-status').value;
+  const filterType = document.getElementById('filter-type').value;
+
+  let rows = readings.slice().sort((a,b) => {
+    if (a.date !== b.date) return b.date.localeCompare(a.date);
+    return a.outlet.localeCompare(b.outlet);
+  });
+
+  rows = rows.filter(r => {
+    if (search && !r.outlet.toLowerCase().includes(search)) return false;
+    if (filterOutlet && r.outlet.toLowerCase() !== filterOutlet.toLowerCase()) return false;
+    if (filterDate && r.date !== filterDate) return false;
+    if (filterStatus && r.status !== filterStatus) return false;
+    if (filterType && r.type !== filterType) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('table-body');
+  if (rows.length === 0){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">No readings match. Log the first outlet above.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    const loggedTime = new Date(r.loggedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const statusClass = r.status === 'on-time' ? 'status-on-time' : 'status-late';
+    const statusLabel = r.status === 'on-time' ? 'On-time' : 'Late';
+    const isWater = r.type === 'water';
+    const unit = isWater ? 'm³' : 'kWh';
+    const typeLabel = isWater ? 'Water' : 'Energy';
+    const deleteDisabled = ownerUnlocked ? '' : 'disabled';
+    return `
+      <tr data-id="${r.id}">
+        <td>${escapeHtml(r.outlet)}</td>
+        <td>${r.date}</td>
+        <td><span class="type-tag">${typeLabel}</span></td>
+        <td class="reading-cell">${Number(r.reading).toFixed(1)} ${unit}</td>
+        <td>${loggedTime}</td>
+        <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
+        <td>${escapeHtml(r.notes || '')}</td>
+        <td>
+          <div class="row-actions">
+            <button class="icon-btn" data-action="delete" data-id="${r.id}" title="Delete" ${deleteDisabled}>✕</button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function render(){
+  renderOutletSuggestions();
+  renderOdometer();
+  renderTable();
+  renderMissingSummary();
+}
+
+document.getElementById('f-type').addEventListener('change', (e) => {
+  const label = document.getElementById('f-reading-label');
+  label.textContent = e.target.value === 'water' ? 'Reading (m³)' : 'Reading (kWh)';
+});
+
+document.getElementById('entry-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const outlet = form.outlet.value.trim();
+  const date = form.date.value;
+  const type = form.type.value;
+  const readingVal = form.reading.value;
+  const notes = form.notes.value.trim();
+  if (!outlet || !date || readingVal === '') return;
+
+  const entry = {
+    id: uid(),
+    outlet,
+    date,
+    type,
+    reading: parseFloat(readingVal),
+    notes,
+    loggedAt: new Date().toISOString()
+  };
+  entry.status = computeStatus(entry.date, entry.loggedAt);
+  readings.push(entry);
+
+  if (!outletNames.some(n => n.toLowerCase() === outlet.toLowerCase())){
+    outletNames.push(outlet);
+    await saveOutletNames();
+  }
+
+  await saveReadings();
+  render();
+  form.reset();
+  document.getElementById('f-date').value = todayStr();
+  document.getElementById('f-reading-label').textContent = 'Reading (kWh)';
+  document.getElementById('f-outlet').focus();
+});
+
+document.getElementById('table-body').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-action="delete"]');
+  if (!btn || btn.disabled || !ownerUnlocked) return;
+  const id = btn.getAttribute('data-id');
+  readings = readings.filter(r => r.id !== id);
+  await saveReadings();
+  render();
+});
+
+document.getElementById('search').addEventListener('input', renderTable);
+document.getElementById('filter-outlet').addEventListener('change', renderTable);
+document.getElementById('filter-date').addEventListener('change', renderTable);
+document.getElementById('filter-status').addEventListener('change', renderTable);
+document.getElementById('filter-type').addEventListener('change', renderTable);
+
+document.getElementById('owner-btn').addEventListener('click', () => {
+  const btn = document.getElementById('owner-btn');
+  if (ownerUnlocked){
+    ownerUnlocked = false;
+    btn.textContent = 'Owner mode: off';
+    btn.classList.remove('unlocked');
+    renderTable();
+    return;
+  }
+  const entered = prompt('Enter owner passcode to unlock deleting entries:');
+  if (entered === OWNER_PASSCODE){
+    ownerUnlocked = true;
+    btn.textContent = 'Owner mode: on';
+    btn.classList.add('unlocked');
+  } else if (entered !== null){
+    alert('Incorrect passcode.');
+  }
+  renderTable();
+});
+
+document.getElementById('export-btn').addEventListener('click', () => {
+  const search = document.getElementById('search').value.trim().toLowerCase();
+  const filterOutlet = document.getElementById('filter-outlet').value;
+  const filterDate = document.getElementById('filter-date').value;
+  const filterStatus = document.getElementById('filter-status').value;
+  const filterType = document.getElementById('filter-type').value;
+
+  const rows = readings.filter(r => {
+    if (search && !r.outlet.toLowerCase().includes(search)) return false;
+    if (filterOutlet && r.outlet.toLowerCase() !== filterOutlet.toLowerCase()) return false;
+    if (filterDate && r.date !== filterDate) return false;
+    if (filterStatus && r.status !== filterStatus) return false;
+    if (filterType && r.type !== filterType) return false;
+    return true;
+  }).sort((a,b) => {
+    if (a.date !== b.date) return b.date.localeCompare(a.date);
+    return a.outlet.localeCompare(b.outlet);
+  });
+
+  if (rows.length === 0){
+    alert('No readings to export for the current filters.');
+    return;
+  }
+
+  const sheetData = rows.map(r => ({
+    Outlet: r.outlet,
+    Date: r.date,
+    Type: r.type === 'water' ? 'Water' : 'Energy',
+    Reading: r.reading,
+    Unit: r.type === 'water' ? 'm3' : 'kWh',
+    'Logged at': new Date(r.loggedAt).toLocaleString(),
+    Status: r.status === 'on-time' ? 'On-time' : 'Late',
+    Notes: r.notes || ''
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(sheetData);
+  ws['!cols'] = [{wch:22},{wch:12},{wch:9},{wch:10},{wch:7},{wch:19},{wch:9},{wch:24}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Meter readings');
+  XLSX.writeFile(wb, `meter-readings-${todayStr()}.xlsx`);
+});
+
+document.getElementById('reset-btn').addEventListener('click', async () => {
+  if (!ownerUnlocked){
+    alert('Only the owner can clear readings. Unlock owner mode first.');
+    return;
+  }
+  if (!confirm('Clear all readings? This cannot be undone.')) return;
+  readings = [];
+  await saveReadings();
+  render();
+});
+
+document.getElementById('import-btn').addEventListener('click', () => {
+  document.getElementById('import-input').click();
+});
+
+document.getElementById('import-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const buffer = await file.arrayBuffer();
+  const wb = XLSX.read(buffer, {type:'array'});
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+
+  if (rows.length === 0){
+    alert('No rows found in that file.');
+    e.target.value = '';
+    return;
+  }
+
+  const keys = Object.keys(rows[0]);
+  const findKey = (needle) => keys.find(k => k.toLowerCase().includes(needle));
+  const codeKey = findKey('code');
+  const locationKey = findKey('location') || findKey('outlet');
+  const managerKey = findKey('manager');
+  const emailKey = findKey('email');
+
+  if (!locationKey){
+    alert('Could not find a "Location" or "Outlet" column in that file.');
+    e.target.value = '';
+    return;
+  }
+
+  let added = 0, updated = 0;
+  rows.forEach(row => {
+    const location = String(row[locationKey] || '').trim();
+    if (!location) return;
+    const code = codeKey ? String(row[codeKey] || '').trim() : '';
+    const manager = managerKey ? String(row[managerKey] || '').trim() : '';
+    const email = emailKey ? String(row[emailKey] || '').trim() : '';
+
+    if (!outletNames.some(n => n.toLowerCase() === location.toLowerCase())){
+      outletNames.push(location);
+      added++;
+    }
+
+    const existing = outletMaster.find(o => (code && o.code === code) || (!code && o.location.toLowerCase() === location.toLowerCase()));
+    if (existing){
+      existing.location = location;
+      existing.manager = manager;
+      if (email) existing.email = email;
+      updated++;
+    } else {
+      outletMaster.push({code, location, manager, email});
+    }
+  });
+
+  await saveOutletNames();
+  await saveOutletMaster();
+  render();
+  e.target.value = '';
+  alert(`Imported: ${added} new outlets added, ${updated} existing outlets updated. Master list now has ${outletMaster.length} outlets.`);
+});
+
+function getMissingOutlets(){
+  const date = document.getElementById('rem-date').value || todayStr();
+  const need = document.getElementById('rem-type').value;
+
+  const loggedToday = readings.filter(r => r.date === date);
+  const loggedEnergy = new Set(loggedToday.filter(r => r.type === 'energy').map(r => r.outlet.toLowerCase()));
+  const loggedWater = new Set(loggedToday.filter(r => r.type === 'water').map(r => r.outlet.toLowerCase()));
+
+  return outletMaster.filter(o => {
+    const key = o.location.toLowerCase();
+    if (need === 'energy') return !loggedEnergy.has(key);
+    if (need === 'water') return !loggedWater.has(key);
+    return !loggedEnergy.has(key) || !loggedWater.has(key);
+  });
+}
+
+function renderMissingSummary(){
+  const summaryEl = document.getElementById('missing-summary');
+  if (outletMaster.length === 0){
+    summaryEl.textContent = 'Import an outlet list to enable reminders.';
+    return;
+  }
+  const missing = getMissingOutlets();
+  summaryEl.textContent = missing.length === 0
+    ? 'All outlets have reported.'
+    : `${missing.length} of ${outletMaster.length} outlets missing`;
+}
+
+document.getElementById('rem-date').addEventListener('change', renderMissingSummary);
+document.getElementById('rem-type').addEventListener('change', renderMissingSummary);
+
+document.getElementById('reminder-btn').addEventListener('click', () => {
+  if (outletMaster.length === 0){
+    alert('Import an outlet list first (footer: "Import outlet list") so outlets and emails are known.');
+    return;
+  }
+  const missing = getMissingOutlets();
+  if (missing.length === 0){
+    alert('All outlets have reported for this date and type — nothing to remind.');
+    return;
+  }
+  const withEmail = missing.filter(o => o.email);
+  const withoutEmail = missing.filter(o => !o.email);
+  if (withEmail.length === 0){
+    alert('None of the missing outlets have an email on file. Re-import your outlet list with an "Email" column filled in.');
+    return;
+  }
+
+  const date = document.getElementById('rem-date').value || todayStr();
+  const to = [...new Set(withEmail.map(o => o.email))].join(',');
+  const subject = `Reminder: meter reading pending for ${date}`;
+  const bodyLines = [
+    `The following outlets have not submitted their ${date} meter reading yet:`,
+    '',
+    ...missing.map(o => `- ${o.location}${o.code ? ' (' + o.code + ')' : ''}`),
+    '',
+    'Please log the reading as soon as possible.'
+  ];
+  const body = bodyLines.join('\n');
+
+  const mailto = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+
+  if (withoutEmail.length > 0){
+    alert(`Note: ${withoutEmail.length} missing outlet(s) have no email on file and were left out of the recipient list: ${withoutEmail.map(o => o.location).join(', ')}`);
+  }
+});
+
+document.getElementById('rem-date').value = todayStr();
+document.getElementById('f-date').value = todayStr();
+loadData();
+</script>
+</body>
+</html>
